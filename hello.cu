@@ -1,14 +1,13 @@
 /*==========================================================================================
-
-// openvino option :
-	"C:\Program Files (x86)\IntelSWTools\openvino\bin\setupvars.bat"
-
+// 這是關於把一個影片輸入，利用 GPU 運算 ，把彩色影片轉成黑白影片
 
 =============================================================================================*/
-
+#include <chrono>
 #include <iostream>
 // nvidia cuda library  
 #include "npp.h"
+#include "cublas.h"
+#include "cusparse.h"
 
 
 // intel-openvino-opencv
@@ -24,63 +23,66 @@ using namespace std;
 
 int main(int args,char* argv[]){
 	if(args != 3){
-		cout << "openvino-init : \"C:\\Program Files (x86)\\IntelSWTools\\openvino\\bin\\setupvars.bat\" "
+		cout << "=====================================================================================\n" ;
+		cout << "openvino-init : \"C:\\Program Files (x86)\\IntelSWTools\\openvino\\bin\\setupvars.bat\"\n";
+		cout << "=====================================================================================\n" ;
 		cout << "--run [videoname]" << endl;
 		exit(1);
 	}
 
 	// ________________  讀取 .mp4___________________________
-	cv::VideoCapture cap(argv[2]);
-	int VideoFrameH = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-	int VideoFrameW = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-	double fps = cap.get(cv::CAP_PROP_FPS);
-	int FrameSize = VideoFrameH * VideoFrameW;
-	size_t bytes = FrameSize*3*sizeof(unsigned char);
-
-	
+	cv::VideoCapture cap(argv[2]);                          		 // 輸入影片檔名
+	int VideoFrameH = cap.get(cv::CAP_PROP_FRAME_HEIGHT);            // 影片高
+	int VideoFrameW = cap.get(cv::CAP_PROP_FRAME_WIDTH);			 // 影片寬
+	double fps = cap.get(cv::CAP_PROP_FPS);                 		 // 取得該影片 FPS 資訊
+	size_t bytes = VideoFrameH*VideoFrameW*3*sizeof(unsigned char);  // 計算需要傳輸 的 bytes = H x W x C x (uchar) 
 
 	if(cap.isOpened()){
-		//________________ 定義指標_________________________ 
-		cv::Mat frame;
-		cv::Mat frame2;
-		unsigned char* hptr; // CPU 處理前
+		// 定義指標 + 配置空間
+		cv::Mat input_frame;
+		cv::Mat output_frame;
+		unsigned char* hptr; // CPU input_frame
 		unsigned char* dptr; // GPU
-		unsigned char* hptr2 = (unsigned char *)malloc(bytes); // CPU 處理後
+		unsigned char* hptr2 = (unsigned char *)malloc(bytes); // CPU output_frame
 		cudaMalloc(&dptr,bytes);
-		
+		chrono::steady_clock::time_point t1;
+		chrono::steady_clock::time_point t2;
+		int frameIdx = 1;
+
 		// ________________ 掃每一禎 ______________________
-		while(cap.read(frame)){
-			hptr = frame.data;
-			cudaMemcpy(dptr,hptr,bytes,cudaMemcpyHostToDevice);
-			// _____________ CUDA HANDLE BLOCK ________________________________________
+		while(cap.read(input_frame)){
+			t1 = chrono::steady_clock::now();
+			{
+				hptr = input_frame.data;  //存到指標上
 
+				cudaMemcpy(dptr,hptr,bytes,cudaMemcpyHostToDevice);
+				//===============================================
+				// do something on dptr at GPU + CUDA .....
+				
 
+				//=================================================
+				cudaMemcpy(hptr2,dptr,bytes,cudaMemcpyDeviceToHost);
+				cudaDeviceSynchronize(); //與主程式同步
+				output_frame = cv::Mat(VideoFrameH,VideoFrameW,CV_8UC3,hptr2);
+			} 
+			t2 = chrono::steady_clock::now();
+			cout << "[" << frameIdx << "] : "  <<  chrono::duration_cast<chrono::milliseconds>(t2-t1).count() << "ms" << endl; 
 
-
-
-
-
-
-
-			//_________________________________________________________________________
-			cudaMemcpy(hptr2,dptr,bytes,cudaMemcpyDeviceToHost);
-			cudaDeviceSynchronize();
-			frame2 = cv::Mat(VideoFrameH,VideoFrameW,CV_8UC3,hptr2);
-
-			cv::imshow("frame", frame);
-			cv::imshow("frame2",frame2);
+			// 顯示
+			cv::imshow("frame", input_frame);
+			cv::imshow("frame2",output_frame);
 			if(cv::waitKey(1) == 27){ 
 		        cout << "Esc !! " << endl; 
 		        break; 
 		    }//endif
+		    frameIdx++;
 		}//end_while
-
+		
+		// 釋放記憶體
 		cudaFree(dptr);
 		free(hptr2);
 
 	}//endif
-
-	
 
 	return 0;
 }//end_main
