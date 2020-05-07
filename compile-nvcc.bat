@@ -2,4 +2,4 @@ nvcc -O3 -o hello hello.cu ^
 -I"." ^
 -I"C:\Program Files (x86)\IntelSWTools\openvino\opencv\include" ^
 -L"C:\Program Files (x86)\IntelSWTools\openvino\opencv\lib" ^
--l"opencv_highgui411" -l"opencv_video411" -l"opencv_videoio411" -l"opencv_core411" -l"opencv_imgproc411" -l"opencv_dnn411"
+-l"opencv_highgui430" -l"opencv_video430" -l"opencv_videoio430" -l"opencv_core430" -l"opencv_imgproc430" -l"opencv_dnn430"
