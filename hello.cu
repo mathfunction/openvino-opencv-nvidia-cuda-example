@@ -1,6 +1,8 @@
 /*==========================================================================================
 // 這是關於把一個影片輸入，利用 GPU 運算 ，把彩色影片轉成黑白影片
 
+// opencv == H x W x C (BGR)
+
 =============================================================================================*/
 #include <chrono>
 #include <iostream>
@@ -17,6 +19,12 @@
 #include <opencv2/video.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/dnn.hpp>
+// DIYCUDA
+#include "assign_cu.hpp"
+
+
+
+
 
 using namespace std;
 
@@ -34,8 +42,9 @@ int main(int args,char* argv[]){
 	cv::VideoCapture cap(argv[2]);                          		 // 輸入影片檔名
 	int VideoFrameH = cap.get(cv::CAP_PROP_FRAME_HEIGHT);            // 影片高
 	int VideoFrameW = cap.get(cv::CAP_PROP_FRAME_WIDTH);			 // 影片寬
-	double fps = cap.get(cv::CAP_PROP_FPS);                 		 // 取得該影片 FPS 資訊
-	size_t bytes = VideoFrameH*VideoFrameW*3*sizeof(unsigned char);  // 計算需要傳輸 的 bytes = H x W x C x (uchar) 
+	double fps = cap.get(cv::CAP_PROP_FPS);    						 // 取得該影片 FPS 資訊
+	int size = VideoFrameH*VideoFrameW*3;
+	size_t bytes = size*sizeof(unsigned char);  // 計算需要傳輸 的 bytes = H x W x C x (uchar) 
 
 	if(cap.isOpened()){
 		// 定義指標 + 配置空間
@@ -58,19 +67,22 @@ int main(int args,char* argv[]){
 				cudaMemcpy(dptr,hptr,bytes,cudaMemcpyHostToDevice);
 				//===============================================
 				// do something on dptr at GPU + CUDA .....
-				
-
+				printPtr<<< 1,256 >>>(dptr,258);
 				//=================================================
 				cudaMemcpy(hptr2,dptr,bytes,cudaMemcpyDeviceToHost);
 				cudaDeviceSynchronize(); //與主程式同步
-				output_frame = cv::Mat(VideoFrameH,VideoFrameW,CV_8UC3,hptr2);
+				output_frame = cv::Mat(VideoFrameH,VideoFrameW,CV_8UC3,hptr2); // 指標變成 cv::Mat
 			} 
 			t2 = chrono::steady_clock::now();
+			cout << "=================================================================================================" << endl;
 			cout << "[" << frameIdx << "] : "  <<  chrono::duration_cast<chrono::milliseconds>(t2-t1).count() << "ms" << endl; 
+			
+
+
 
 			// 顯示
-			cv::imshow("frame", input_frame);
-			cv::imshow("frame2",output_frame);
+			cv::imshow("input_frame", input_frame);
+			cv::imshow("output_frame",output_frame);
 			if(cv::waitKey(1) == 27){ 
 		        cout << "Esc !! " << endl; 
 		        break; 
