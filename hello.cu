@@ -20,7 +20,7 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/dnn.hpp>
 // DIYCUDA
-#include "assign_cu.hpp"
+#include "cuda_useful.hpp"
 
 
 
@@ -67,14 +67,15 @@ int main(int args,char* argv[]){
 				cudaMemcpy(dptr,hptr,bytes,cudaMemcpyHostToDevice);
 				//===============================================
 				// do something on dptr at GPU + CUDA .....
-				printPtr<<< 1,256 >>>(dptr,258);
+
+				cuda_useful::setConstantBGR<<< 2,512 >>>(dptr,size,255,255,255);
 				//=================================================
 				cudaMemcpy(hptr2,dptr,bytes,cudaMemcpyDeviceToHost);
 				cudaDeviceSynchronize(); //與主程式同步
 				output_frame = cv::Mat(VideoFrameH,VideoFrameW,CV_8UC3,hptr2); // 指標變成 cv::Mat
 			} 
 			t2 = chrono::steady_clock::now();
-			cout << "=================================================================================================" << endl;
+			//cout << "=================================================================================================" << endl;
 			cout << "[" << frameIdx << "] : "  <<  chrono::duration_cast<chrono::milliseconds>(t2-t1).count() << "ms" << endl; 
 			
 
