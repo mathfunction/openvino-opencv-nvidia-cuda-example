@@ -1,6 +1,6 @@
 /*==========================================================================================
 // 這是關於把一個影片輸入，利用 GPU 運算 ，把彩色影片添加隨機對角線
-
+"C:\\Program Files (x86)\\IntelSWTools\\openvino\\bin\\setupvars.bat"
 // opencv == H x W x C (BGR)
 
 =============================================================================================*/
@@ -43,19 +43,13 @@ __global__ void setGPUChannels(
 		int b,
 		int g,
 		int r){
-	int NThreads = gridDim.x*blockDim.x;
-	int NLoop = cuda_useful::checkLoop1d(NThreads,size);
-	for(int i=0;i<NLoop;i++){ 
-		int id = blockIdx.x*blockDim.x+threadIdx.x;
-		int pos = id + i*NThreads;
-		if(pos < size){
-			dx[pos] = pos;
-			dy[pos] = pos;
-			dB[pos] = (unsigned char)b;
-			dG[pos] = (unsigned char)g;
-			dR[pos] = (unsigned char)r;
-		}//endif
-	}//endfor
+	__cuda_parallel_1d__(size){
+			dx[idx] = idx;
+			dy[idx] = idx;
+			dB[idx] = (unsigned char)b;
+			dG[idx] = (unsigned char)g;
+			dR[idx] = (unsigned char)r;
+	}
 }
 
 
@@ -132,8 +126,6 @@ void run(const char* filename,int NumBlocks,int NumThreads){
 			//cout << "=================================================================================================" << endl;
 			cout << "f-" << frameIdx <<  " : "  << chrono::duration_cast<chrono::milliseconds>(t2-t1).count() << " ms" <<"["  <<  chrono::duration_cast<chrono::microseconds>(t2-t1).count() << " mus]"  << endl; 
 			
-
-
 
 			// 顯示
 			cv::imshow("input_frame", input_frame);

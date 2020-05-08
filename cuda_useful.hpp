@@ -2,62 +2,35 @@
 #ifndef __CUDA_USEFUL_CUHPP__
 #define __CUDA_USEFUL_CUHPP__
 
-
+#include "cuda_block.hpp"
 
 namespace cuda_useful{
-
-
-	__device__ int checkLoop1d(int NThreads,int size){
-		if(size < NThreads){
-			return 1;
-		}else if((size%NThreads) == 0){
-			return size/NThreads;
-		}else{
-			return size/NThreads + 1;
-		}//endelse
-	}
 
 
 	/*============================================================
 	// CUDA_PARALLEL_1D{　掃全部　, 列印此工作是給哪個工人負責?? }　
 	==============================================================*/
 	__global__ void printPixel(unsigned char *ptr,int size){
-		int NThreads = gridDim.x*blockDim.x;
-		int NLoop = checkLoop1d(NThreads,size);
-		for(int i=0;i<NLoop;i++){  
-			int id = blockIdx.x*blockDim.x+threadIdx.x;
-			int pos = id + i*NThreads;
-			if(pos < size){
-				// =====================================================================================================================================================
-				printf("ID : {%d x %d + %d = %d / %d}, ptr[%d / %d]:%d \n",blockIdx.x,blockDim.x,threadIdx.x,gridDim.x*blockDim.x,id,pos,size,(int)ptr[pos]);
-				//=======================================================================================================================================================
-			}//endif
-		}//endfor
-		
+		__cuda_parallel_1d__(size){
+			printf("ID : {%d x %d + %d = %d / %d}, ptr[%d / %d]:%d \n",blockIdx.x,blockDim.x,threadIdx.x,NThreads,idLoop,idx,size,(int)ptr[idx]);
+		}
 	}
-
+	
 	/*===============================================================
 	// CUDA_PARALLEL_1D{ 掃全部 ,　設定 BGR  }　
 	=================================================================*/
-	__global__ void setConstantBGR(unsigned char *ptr,int size,int b,int g,int r){
-		int NThreads = gridDim.x*blockDim.x;
-		int NLoop = checkLoop1d(NThreads,size);
-		for(int i=0;i<NLoop;i++){  
-			int id = blockIdx.x*blockDim.x+threadIdx.x;
-			int pos = id + i*NThreads;
-			// 平行化　BGR 
-			if(pos < size){
-				int v = pos%3;
-				if(v==0){
-					ptr[pos] = (unsigned char)b;
-				}else if(v==1){
-					ptr[pos] = (unsigned char)g;
-				}else{
-					ptr[pos] = (unsigned char)r;
-				}//end_else
-			}//endif
-		}//endfor
 
+	__global__ void setConstantBGR(unsigned char *ptr,int size,int b,int g,int r){
+		__cuda_parallel_1d__(size){
+			int v = idx%3;
+			if(v==0){
+				ptr[idx] = (unsigned char)b;
+			}else if(v==1){
+				ptr[idx] = (unsigned char)g;
+			}else{
+				ptr[idx] = (unsigned char)r;
+			}//end_else
+		}
 	}
 
 	/*==========================================================================
@@ -71,23 +44,14 @@ namespace cuda_useful{
 		unsigned char *b,
 		unsigned char *g,
 		unsigned char *r,
-		int size)
-	{
-		int NThreads = gridDim.x*blockDim.x;
-		int NLoop = checkLoop1d(NThreads,size);
-		for(int i=0;i<NLoop;i++){  
-			int id = blockIdx.x*blockDim.x+threadIdx.x;
-			int pos = id + i*NThreads;
-			if(pos < size){
-				int bgrIdx = 3*(y[pos]*w + x[pos]);
-				ptr[bgrIdx] = b[pos];
-				ptr[bgrIdx+1] = g[pos];
-				ptr[bgrIdx+2] = r[pos];
-			}//endif
-		}//endfor	
+		int size){
+		__cuda_parallel_1d__(size){
+				int bgrIdx = 3*(y[idx]*w + x[idx]);
+				ptr[bgrIdx] = b[idx];
+				ptr[bgrIdx+1] = g[idx];
+				ptr[bgrIdx+2] = r[idx];
+		}
 	}//end_setBGR
-
-
 
 
 
