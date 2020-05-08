@@ -1,4 +1,4 @@
-nvcc -O3 -o %1 %1.cu ^
+nvcc -Xcompiler -fPIC -shared -O3 -o %1.dll %1.cu ^
 -I"." ^
 -I"C:\Program Files (x86)\IntelSWTools\openvino\opencv\include" ^
 -L"C:\Program Files (x86)\IntelSWTools\openvino\opencv\lib" ^

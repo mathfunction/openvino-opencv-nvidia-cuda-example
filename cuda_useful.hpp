@@ -68,9 +68,9 @@ namespace cuda_useful{
 		int*x,
 		int*y,
 		int w,
-		int*b,
-		int*g,
-		int*r,
+		unsigned char *b,
+		unsigned char *g,
+		unsigned char *r,
 		int size)
 	{
 		int NThreads = gridDim.x*blockDim.x;
@@ -81,8 +81,8 @@ namespace cuda_useful{
 			if(pos < size){
 				int bgrIdx = 3*(y[pos]*w + x[pos]);
 				ptr[bgrIdx] = b[pos];
-				ptr[bgrIdx] = g[pos];
-				ptr[bgrIdx] = r[pos];
+				ptr[bgrIdx+1] = g[pos];
+				ptr[bgrIdx+2] = r[pos];
 			}//endif
 		}//endfor	
 	}//end_setBGR
